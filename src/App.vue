@@ -1,53 +1,113 @@
 <template>
   <div id="app">
-    <div class="top-bar">
-      <div>
-        <span class="menu-link"><a href="#validators">Validators</a></span>
-        <span class="menu-link"><a href="#transfer">Transfer</a></span>
-      </div>
-      <div>
-        Mnemonic: <input v-model="mnemonic" />
-        <button @click="commitMnemonic">Submit</button>
-      </div>
-      <div>
-        Don't have mnemonic? Click <button @click="generateMnemonic">here</button> to generate one in the box above
-      </div>
-      <div>
-        Your address: {{ address }}
-      </div>
-      <div>
-        Your balance: {{ balance }}
-      </div>
-    </div>
-    <div class="main">
-      <div class="validators">
-        <h1 id="validators">Validators / Delegation</h1>
-        <div class="validator-cell" v-for="(v, i) in validators" v-bind:key="v.operator_address">
-          <h2>{{ v.description.moniker }}</h2>
-          <div>
-            Address: {{ v.operator_address }}
-          </div>
-          <div>
-            Description: {{ v.description.details }}
-          </div>
-          Delegate amount: <input ref="delegateAmount" />
-          <button @click="delegate(v, i)" :disabled="!logined">Delegate</button>
+    <v-app>
+      <v-toolbar fixed>
+        <v-btn v-if="logined" @click="logout">Logout</v-btn>
+        <v-btn v-else @click="loginDialog = true">Login</v-btn>
+        <v-spacer></v-spacer>
+        <div v-if="logined">
+          {{ address }} ({{balance}} LIKE)
+        </div>
+        <v-spacer></v-spacer>
+        <v-btn href="#validators">Validators</v-btn>
+        <v-btn :disabled="!logined" @click="transferDialog = true">Transfer</v-btn>
+      </v-toolbar>
+      <v-dialog v-model="loginDialog">
+        <v-card>
+          <v-card-title class="headline">
+            Please enter your mnemonic
+          </v-card-title>
+          <v-card-text>
+            <v-textarea label="mnenomic" v-model="mnemonic" ref="mnemonic"></v-textarea>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="commitMnemonic">OK</v-btn>
+            <v-btn @click="loginDialog = false">Cancel</v-btn>
+            <v-btn @click="generateMnemonic">Create mnemonic for me</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="errorDialog">
+        <v-card>
+          <v-card-title class="headline">
+            Error occured!
+          </v-card-title>
+          <v-card-text>
+            Error message: {{ errorMessage }}
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="errorDialog = false">OK</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="txDialog">
+        <v-card>
+          <v-card-title class="headline">
+            Transaction sent.
+          </v-card-title>
+          <v-card-text>
+            Transaction hash: {{ txHash }}
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="txDialog = false">OK</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="transferDialog">
+        <v-card>
+          <v-card-title class="headline">
+            Transfer
+          </v-card-title>
+          <v-card-text>
+            <v-text-field label="To address" v-model="transferTo"></v-text-field>
+            <v-text-field label="Value" v-model="transferValue" :rules="[checkValue]" suffix="LIKE"></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="transfer">Send</v-btn>
+            <v-btn @click="transferDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="delegateDialog">
+        <v-card>
+          <v-card-title class="headline">
+            Delegate to {{ this.validator.operator_address }}
+          </v-card-title>
+          <v-card-text>
+            <v-text-field label="Value" v-model="delegateValue" :rules="[checkValue]" suffix="LIKE"></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="delegate">Send</v-btn>
+            <v-btn @click="delegateDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <div class="main">
+        <div class="validators">
+          <h1 class="anchor" id="validators">Validators / Delegation</h1>
+          <v-card class="pa-2 ma-2" v-for="(v, i) in validators" v-bind:key="v.operator_address">
+            <v-container grid-list-md text-xs-left>
+              <v-layout row wrap>
+                <v-flex xs12>
+                  <v-card-title class="title font-weight-bold">{{ v.description.moniker }} ({{ v.operator_address }})</v-card-title>
+                </v-flex>
+                <v-flex xs12>
+                  <v-card-text>{{ v.description.details }}</v-card-text>
+                </v-flex>
+                <v-btn @click="delegateSelect(v, i)" :disabled="!logined">Delegate</v-btn>
+              </v-layout>
+            </v-container>
+          </v-card>
         </div>
       </div>
-      <div class="transfer">
-        <h1 id="transfer">Transfer</h1>
-        <div>To: <input ref="transferTo"/></div>
-        <div>Value: <input ref="transferValue"/></div>
-        <button @click="transfer()" :disabled="!logined">Transfer</button>
-      </div>
-    </div>
+    </v-app>
   </div>
 </template>
 
 <script>
 import { getSeed, getNewWalletFromSeed, signWithPrivateKey } from "@lunie/cosmos-keys";
 import Cosmos from "@lunie/cosmos-js";
-import { CHAIN_ID, DENOM } from "../config.js";
+import { CHAIN_ID, DENOM, ACCOUNT_INFO_FETCH_INTERVAL_MS } from "../config.js";
 
 const api = new Cosmos("/api", CHAIN_ID)
 
@@ -63,20 +123,16 @@ function normalizeAddress(address) {
   return address.replace(/\s/g, "");
 }
 
-async function handleMsg(msgCallPromise, signer) {
-  const { simulate, send } = await msgCallPromise;
-  const gas = (await simulate({})).toString();
-  const { hash, included } = await send({ gas }, signer);
-  console.log(hash);
-  await included();
-  console.log("Included");
-}
-
 export default {
   name: 'app',
   async created() {
     const validators = await api.get.validators();
     this.validators = validators;
+    const loopAccountUpdate = async () => {
+      await this.updateAccountInfo();
+      setTimeout(loopAccountUpdate, ACCOUNT_INFO_FETCH_INTERVAL_MS);
+    };
+    setTimeout(loopAccountUpdate, ACCOUNT_INFO_FETCH_INTERVAL_MS);
   },
   data() {
     return {
@@ -85,15 +141,27 @@ export default {
       address: "",
       account: {},
       validators: [],
+      loginDialog: false,
+      transferDialog: false,
+      delegateDialog: false,
+      validator: {},
+      delegateAmount: 0,
+      txDialog: false,
+      txHash: "",
+      errorDialog: false,
+      errorMessage: "",
     };
   },
   computed: {
     balance() {
-      if (!this.account || !this.account.coins) {
-        return "";
+      if (!this.address) {
+        return "N/A";
       }
-      const { amount } = this.account.coins.filter((coin) => coin.denom === DENOM)[0];
-      return Number.parseFloat(amount) / 1e9 + " LIKE";
+      let amount = 0;
+      if (this.account && this.account.coins) {
+        amount = this.account.coins.filter((coin) => coin.denom === DENOM)[0].amount;
+      }
+      return Number.parseFloat(amount) / 1e9;
     },
     logined() {
       return !!this.address;
@@ -103,12 +171,21 @@ export default {
     async generateMnemonic() {
       this.mnemonic = getSeed();
       setImmediate(() => {
-        window.alert("Mnemonic generated, please backup");
+        this.$refs.mnemonic.focus();
+        document.execCommand("selectAll");
+        document.execCommand("copy");
+        window.alert("Mnemonic generated and copied to clipboard, please backup");
       })
     },
+    async updateAccountInfo() {
+      if (this.address) {
+        this.account = await api.get.account(this.address);
+      }
+    },
     async commitMnemonic() {
-      const wallet = getNewWalletFromSeed(this.mnemonic);
+      const wallet = getNewWalletFromSeed(this.mnemonic.replace(/\n/g, ""));
       this.mnemonic = "";
+      this.loginDialog = false;
       const publicKey = Buffer.from(wallet.publicKey, "hex");
       const privateKey = Buffer.from(wallet.privateKey, "hex");
       this.signer = (signMessage) => {
@@ -116,25 +193,74 @@ export default {
         return { signature, publicKey: publicKey };
       }
       this.address = wallet.cosmosAddress;
-      this.account = await api.get.account(wallet.cosmosAddress);
     },
-    async delegate(validator, i) {
+    logout() {
+      this.signer = null;
+      this.address = "";
+      this.account = {};
+    },
+    createErrorDialog(errorMessage) {
+      this.errorMessage = errorMessage;
+      this.errorDialog = true;
+    },
+    createTxDialog(txHash) {
+      this.txHash = txHash;
+      this.txDialog = true;
+    },
+    checkValue(value) {
+      if (!value) {
+        return "Please enter a value";
+      }
+      const strippedValue = value.replace(/^\s+/g, "").replace(/\s+$/, "");
+      if (strippedValue.length === 0) {
+        return "Please enter a value";
+      }
+      if (!/^[0-9]+$/.test(strippedValue)) {
+        return "Invalid number";
+      }
+      const numberValue = Number.parseInt(strippedValue);
+      if (this.balance < numberValue) {
+        return "Not enough balance";
+      }
+      return true;
+    },
+    async sendTx(msgCallPromise) {
+      try {
+        const { simulate, send } = await msgCallPromise;
+        const gas = (await simulate({})).toString();
+        const { hash, included } = await send({ gas }, this.signer);
+        console.log(hash);
+        this.createTxDialog(hash);
+        await included();
+        console.log("Included");
+      } catch (err) {
+        this.txDialog = false;
+        this.createErrorDialog(err);
+      }
+    },
+    delegateSelect(validator) {
+      this.validator = validator;
+      this.delegateDialog = true;
+    },
+    async delegate() {
+      this.delegateDialog = false;
       const from = normalizeAddress(this.address);
-      const amount = likeToNanolike(this.$refs.delegateAmount[i].value);
+      const amount = likeToNanolike(this.delegateValue);
       const msgPromise = api.MsgDelegate(from, {
-        validator_address: validator.operator_address,
+        validator_address: this.validator.operator_address,
         amount,
         denom: DENOM,
       });
-      await handleMsg(msgPromise, this.signer);
+      this.sendTx(msgPromise);
     },
     async transfer() {
+      this.transferDialog = false;
       const from = normalizeAddress(this.address);
-      const toAddress = normalizeAddress(this.$refs.transferTo.value);
-      const value = this.$refs.transferValue.value;
+      const toAddress = normalizeAddress(this.transferTo);
+      const value = this.transferValue;
       const amount = likeToAmount(value);
       const msgPromise = api.MsgSend(from, { toAddress, amounts: [amount] });
-      await handleMsg(msgPromise, this.signer);
+      this.sendTx(msgPromise);
     },
     governance(proposal) {
       console.log(proposal);
@@ -144,19 +270,13 @@ export default {
 </script>
 
 <style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+.anchor {
+  padding-top: 5rem;
+  padding-left: 2rem;
 }
 
-.validator-cell {
-  border-style: solid;
-}
-
-.menu-link {
-  display: inline-block;
-  margin: 10px;
+.validator-card {
+  margin: 1rem;
+  padding: 1rem;
 }
 </style>

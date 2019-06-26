@@ -5,7 +5,8 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "server": "node server/index.js"
   },
   "dependencies": {
     "@lunie/cosmos-js": "git://github.com/nnkken/cosmos-api.git#release_fix",
@@ -15,7 +16,8 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-http-proxy": "^1.5.1",
-    "vue": "^2.6.10"
+    "vue": "^2.6.10",
+    "vuetify": "^1.5.16"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.8.0",

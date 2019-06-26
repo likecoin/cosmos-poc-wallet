@@ -48,8 +48,12 @@ import { CHAIN_ID, DENOM } from "../config.js";
 
 const api = new Cosmos("/api", CHAIN_ID)
 
+function likeToNanolike(value) {
+  return Number.parseInt(value).toString() + "000000000";
+}
+
 function likeToAmount(value) {
-    return { denom: DENOM, amount: Number.parseInt(value).toString() + "000000000" };
+  return { denom: DENOM, amount: likeToNanolike(value) };
 }
 
 function normalizeAddress(address) {
@@ -107,7 +111,7 @@ export default {
     },
     async delegate(validator, i) {
       const from = normalizeAddress(this.address);
-      const amount = this.$refs.delegateAmount[i].value;
+      const amount = likeToNanolike(this.$refs.delegateAmount[i].value);
       const msgPromise = api.MsgDelegate(from, {
         validator_address: validator.operator_address,
         amount,

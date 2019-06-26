@@ -10,6 +10,9 @@
         <button @click="commitMnemonic">Submit</button>
       </div>
       <div>
+        Don't have mnemonic? Click <button @click="generateMnemonic">here</button> to generate one in the box above
+      </div>
+      <div>
         Your address: {{ address }}
       </div>
       <div>
@@ -42,7 +45,7 @@
 </template>
 
 <script>
-import { getNewWalletFromSeed, signWithPrivateKey } from "@lunie/cosmos-keys";
+import { getSeed, getNewWalletFromSeed, signWithPrivateKey } from "@lunie/cosmos-keys";
 import Cosmos from "@lunie/cosmos-js";
 import { CHAIN_ID, DENOM } from "../config.js";
 
@@ -97,6 +100,12 @@ export default {
     }
   },
   methods: {
+    async generateMnemonic() {
+      this.mnemonic = getSeed();
+      setImmediate(() => {
+        window.alert("Mnemonic generated, please backup");
+      })
+    },
     async commitMnemonic() {
       const wallet = getNewWalletFromSeed(this.mnemonic);
       this.mnemonic = "";

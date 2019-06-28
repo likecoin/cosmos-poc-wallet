@@ -16,6 +16,7 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-http-proxy": "^1.5.1",
+    "fast-json-stable-stringify": "^2.0.0",
     "vue": "^2.6.10",
     "vuetify": "^1.5.16"
   },

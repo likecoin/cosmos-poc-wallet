@@ -4,4 +4,5 @@ module.exports = {
     ACCOUNT_INFO_FETCH_INTERVAL_MS: 3000,
     DENOM: "nanolike",
     PORT: 8080,
+    FAUCET_AMOUNT: "10000000000000", // unit: nanolike
 };

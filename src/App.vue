@@ -11,6 +11,7 @@
         <v-spacer></v-spacer>
         <v-btn href="#validators">Validators</v-btn>
         <v-btn :disabled="!logined" @click="transferDialog = true">Transfer</v-btn>
+        <v-btn :disabled="!logined" @click="faucet">Faucet</v-btn>
       </v-toolbar>
       <v-dialog v-model="loginDialog">
         <v-card>
@@ -108,6 +109,7 @@
 import { getSeed, getNewWalletFromSeed, signWithPrivateKey } from "@lunie/cosmos-keys";
 import Cosmos from "@lunie/cosmos-js";
 import { CHAIN_ID, DENOM, ACCOUNT_INFO_FETCH_INTERVAL_MS } from "../config.js";
+import axios from "axios";
 
 const api = new Cosmos("/api", CHAIN_ID)
 
@@ -182,7 +184,7 @@ export default {
         this.account = await api.get.account(this.address);
       }
     },
-    async commitMnemonic() {
+    commitMnemonic() {
       const wallet = getNewWalletFromSeed(this.mnemonic.replace(/\n/g, ""));
       this.mnemonic = "";
       this.loginDialog = false;
@@ -206,6 +208,19 @@ export default {
     createTxDialog(txHash) {
       this.txHash = txHash;
       this.txDialog = true;
+    },
+    async faucet() {
+      try {
+        const address = normalizeAddress(this.address);
+        const res = await axios.post(`/faucet/${address}`);
+        if (res.status === 200) {
+          this.createTxDialog(res.data.txHash);
+        } else {
+          this.createErrorDialog(res.statusText);
+        }
+      } catch (err) {
+        this.createErrorDialog(err);
+      }
     },
     checkValue(value) {
       if (!value) {

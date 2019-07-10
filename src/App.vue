@@ -86,18 +86,27 @@
       <div class="main">
         <div class="validators">
           <h1 class="anchor" id="validators">Validators / Delegation</h1>
-          <v-card class="pa-2 ma-2" v-for="(v, i) in validators" v-bind:key="v.operator_address">
-            <v-container grid-list-md text-xs-left>
-              <v-layout row wrap>
-                <v-flex xs12>
-                  <v-card-title class="title font-weight-bold">{{ v.description.moniker }} ({{ v.operator_address }})</v-card-title>
-                </v-flex>
-                <v-flex xs12>
-                  <v-card-text>{{ v.description.details }}</v-card-text>
-                </v-flex>
-                <v-btn @click="delegateSelect(v, i)" :disabled="!logined">Delegate</v-btn>
-              </v-layout>
-            </v-container>
+          <v-card
+            v-for="(v, i) in validators"
+            :key="v.operator_address"
+            class="ma-2"
+          >
+            <v-card-title primary-title>
+              <v-flex xs12 class="headline">{{ v.description.moniker }}</v-flex>
+              <v-flex xs12 class="text-truncate grey--text">
+                <code class="elevation-0">{{ v.operator_address }}</code>
+              </v-flex>
+            </v-card-title>
+            <v-card-text>{{ v.description.details }}</v-card-text>
+            <v-divider light></v-divider>
+            <v-card-actions>
+              <v-btn
+                color="#28646e"
+                :disabled="!logined"
+                flat
+                @click="delegateSelect(v, i)"
+              >Delegate</v-btn>
+            </v-card-actions>
           </v-card>
         </div>
       </div>
